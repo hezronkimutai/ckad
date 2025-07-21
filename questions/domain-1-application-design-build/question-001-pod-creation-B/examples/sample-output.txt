@@ -1,0 +1,97 @@
+# Sample Output for Question 001: Create a Basic Pod
+
+## Pod Creation Output
+$ kubectl run web-server --image=nginx:1.20 --port=80 --labels="app=web,tier=frontend"
+pod/web-server created
+
+## Verification Outputs
+
+### Get Pod Status
+$ kubectl get pods web-server
+NAME         READY   STATUS    RESTARTS   AGE
+web-server   1/1     Running   0          30s
+
+### Pod Description (Key sections)
+$ kubectl describe pod web-server
+Name:         web-server
+Namespace:    default
+Priority:     0
+Node:         kind-control-plane/172.18.0.2
+Start Time:   Mon, 21 Jul 2025 11:44:00 +0300
+Labels:       app=web
+              tier=frontend
+Annotations:  <none>
+Status:       Running
+IP:           10.244.0.5
+IPs:
+  IP:  10.244.0.5
+Containers:
+  nginx-container:
+    Container ID:   containerd://abc123...
+    Image:          nginx:1.20
+    Image ID:       docker.io/library/nginx@sha256:def456...
+    Port:           80/TCP
+    Host Port:      0/TCP
+    State:          Running
+      Started:      Mon, 21 Jul 2025 11:44:05 +0300
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-xyz (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Events:
+  Type    Reason     Age   From               Message
+  ----    ------     ----  ----               -------
+  Normal  Scheduled  30s   default-scheduler  Successfully assigned default/web-server to kind-control-plane
+  Normal  Pulling    29s   kubelet            Pulling image "nginx:1.20"
+  Normal  Pulled     26s   kubelet            Successfully pulled image "nginx:1.20" in 3.2s
+  Normal  Created    26s   kubelet            Created container nginx-container
+  Normal  Started    25s   kubelet            Started container nginx-container
+
+### Pod Labels
+$ kubectl get pod web-server --show-labels
+NAME         READY   STATUS    RESTARTS   AGE   LABELS
+web-server   1/1     Running   0          45s   app=web,tier=frontend
+
+### Container Image Verification
+$ kubectl get pod web-server -o jsonpath='{.spec.containers[0].image}'
+nginx:1.20
+
+### Container Port Verification
+$ kubectl get pod web-server -o jsonpath='{.spec.containers[0].ports[0].containerPort}'
+80
+
+### Pod Status Check
+$ kubectl get pod web-server -o jsonpath='{.status.phase}'
+Running
+
+## Alternative YAML Creation Output
+$ kubectl run web-server --image=nginx:1.20 --port=80 --labels="app=web,tier=frontend" --dry-run=client -o yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app: web
+    tier: frontend
+  name: web-server
+spec:
+  containers:
+  - image: nginx:1.20
+    name: web-server
+    ports:
+    - containerPort: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+## Cleanup Output
+$ kubectl delete pod web-server
+pod "web-server" deleted

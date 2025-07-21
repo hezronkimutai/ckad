@@ -1,0 +1,56 @@
+# YAML Manifest Template
+# Use this template for creating Kubernetes resource manifests
+
+apiVersion: [api-version]  # e.g., v1, apps/v1, networking.k8s.io/v1
+kind: [ResourceKind]       # e.g., Pod, Deployment, Service, ConfigMap
+metadata:
+  name: [resource-name]    # Required: name of the resource
+  namespace: [namespace]   # Optional: namespace (defaults to 'default')
+  labels:                  # Optional: labels for organization and selection
+    app: [app-name]
+    version: [version]
+    component: [component]
+  annotations:             # Optional: annotations for metadata
+    [key]: [value]
+spec:
+  # Resource-specific specification goes here
+  # This varies greatly depending on the kind of resource
+  
+  # Common patterns:
+  
+  # For Pods:
+  # containers:
+  # - name: [container-name]
+  #   image: [image:tag]
+  #   ports:
+  #   - containerPort: [port]
+  
+  # For Deployments:
+  # replicas: [number]
+  # selector:
+  #   matchLabels:
+  #     app: [app-name]
+  # template:
+  #   metadata:
+  #     labels:
+  #       app: [app-name]
+  #   spec:
+  #     containers: [container-spec]
+  
+  # For Services:
+  # selector:
+  #   app: [app-name]
+  # ports:
+  # - port: [service-port]
+  #   targetPort: [container-port]
+  #   protocol: TCP
+  # type: [ClusterIP|NodePort|LoadBalancer]
+
+---
+# Use --- to separate multiple resources in the same file
+# apiVersion: v1
+# kind: [AnotherResourceKind]
+# metadata:
+#   name: [another-resource-name]
+# spec:
+#   # Another resource specification
