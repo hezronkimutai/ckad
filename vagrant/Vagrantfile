@@ -1,0 +1,97 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# CKAD Practice Environment with Vagrant
+# This Vagrantfile creates a multi-node Kubernetes cluster for CKAD practice
+
+VAGRANTFILE_API_VERSION = "2"
+
+# Cluster configuration
+CLUSTER_NAME = "ckad-practice"
+NUM_WORKER_NODES = 2
+K8S_VERSION = "1.28.0"
+CALICO_VERSION = "v3.26.0"
+CONTROL_PLANE_IP = "192.168.56.10"
+WORKER_IP_BASE = "192.168.56.1"
+
+# VM configuration
+VM_MEMORY = 2048
+VM_CPUS = 2
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "ubuntu/jammy64"  # Ubuntu 22.04 LTS
+  config.vm.box_check_update = false
+
+  # Disable default synced folder
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  # Control Plane Node
+  config.vm.define "control-plane" do |control|
+    control.vm.hostname = "control-plane"
+    control.vm.network "private_network", ip: CONTROL_PLANE_IP
+    
+    control.vm.provider "virtualbox" do |vb|
+      vb.name = "#{CLUSTER_NAME}-control-plane"
+      vb.memory = VM_MEMORY
+      vb.cpus = VM_CPUS
+      vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+      vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+    end
+
+    control.vm.provision "shell", path: "scripts/common.sh"
+    control.vm.provision "shell", path: "scripts/control-plane.sh", 
+                         args: [CONTROL_PLANE_IP, K8S_VERSION, CALICO_VERSION]
+  end
+
+  # Worker Nodes
+  (1..NUM_WORKER_NODES).each do |i|
+    config.vm.define "worker-#{i}" do |worker|
+      worker.vm.hostname = "worker-#{i}"
+      worker.vm.network "private_network", ip: "#{WORKER_IP_BASE}#{i}"
+      
+      worker.vm.provider "virtualbox" do |vb|
+        vb.name = "#{CLUSTER_NAME}-worker-#{i}"
+        vb.memory = VM_MEMORY
+        vb.cpus = VM_CPUS
+        vb.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
+        vb.customize ["modifyvm", :id, "--natdnsproxy1", "on"]
+      end
+
+      worker.vm.provision "shell", path: "scripts/common.sh"
+      worker.vm.provision "shell", path: "scripts/worker.sh", 
+                          args: [CONTROL_PLANE_IP]
+    end
+  end
+
+  # Optional: Load Balancer (for advanced scenarios)
+  # Uncomment to enable HAProxy load balancer
+  # config.vm.define "loadbalancer" do |lb|
+  #   lb.vm.hostname = "loadbalancer"
+  #   lb.vm.network "private_network", ip: "192.168.56.100"
+  #   
+  #   lb.vm.provider "virtualbox" do |vb|
+  #     vb.name = "#{CLUSTER_NAME}-loadbalancer"
+  #     vb.memory = 512
+  #     vb.cpus = 1
+  #   end
+  #
+  #   lb.vm.provision "shell", path: "scripts/loadbalancer.sh"
+  # end
+
+  # Provision kubectl config on host (optional)
+  config.trigger.after :up do |trigger|
+    trigger.name = "Copy kubectl config"
+    trigger.info = "Copying kubectl config from control plane..."
+    trigger.run_remote = {inline: "sudo cat /etc/kubernetes/admin.conf"}
+    trigger.ruby do |env, machine|
+      if machine.name.to_s == "control-plane"
+        puts "Kubernetes cluster is ready!"
+        puts "To access the cluster from your host machine:"
+        puts "1. Copy the kubectl config: vagrant ssh control-plane -c 'sudo cat /etc/kubernetes/admin.conf' > ~/.kube/ckad-config"
+        puts "2. Set KUBECONFIG: export KUBECONFIG=~/.kube/ckad-config"
+        puts "3. Update server IP: sed -i 's/6443/6443/g' ~/.kube/ckad-config"
+        puts "4. Test connection: kubectl get nodes"
+      end
+    end
+  end
+end
